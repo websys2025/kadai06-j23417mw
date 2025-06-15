@@ -1,23 +1,45 @@
+# kadai6-2.py
+
+
 import requests
-import json
-from datetime import datetime
 
-#道路種別を指定．この例は一般道
-road_type = "3"
+# APIキー (e-Statで登録して取得)
+API_KEY = "3ecf19dfb9f0feff73e52189d434238c9232265e"
 
-#日時を指定
-time_code_from = "20250512"+"0000"
-time_code_to   = "20250512"+"2355"
+# APIエンドポイント
+url = "http://api.e-stat.go.jp/rest/3.0/app/json/getStatsData"
 
-#緯度経度を指定．この例は東京
-min_x = 139.45
-min_y = 35.55
-max_x = 139.93
-max_y = 35.82
+# 労働力調査の統計データID
+STATS_DATA_ID = "00200573"
 
-api = f"https://api.jartic-open-traffic.org/geoserver?service=WFS&version=2.0.0&request=GetFeature&typeNames=t_travospublic_measure_5m&srsName=EPSG:4326&outputFormat=application/json&exceptions=application/json&cql_filter=道路種別={road_type} AND 時間コード>={time_code_from} AND 時間コード<={time_code_to} AND BBOX(ジオメトリ,{min_x},{min_y},{max_x},{max_y},'EPSG:4326')"
-response = requests.get(api)
+# パラメータ設定
+params = {
+    "appId": API_KEY,
+    "statsDataId": STATS_DATA_ID,
+    "metaGetFlg": "Y",
+    "cntGetFlg": "N",
+    "sectionHeaderFlg": "2",
+}
 
-print(response.text[:200])
+# リクエスト送信
+response = requests.get(url, params=params)
 
-data = json.loads(response.text)
+# JSON形式で受け取る
+data = response.json()
+
+# 結果ステータス確認
+if data["GET_STATS_DATA"]["RESULT"]["STATUS"] != 0:
+    print("APIエラー:", data["GET_STATS_DATA"]["RESULT"]["ERROR_MSG"])
+    exit()
+
+# VALUEリストを抽出
+values = data["GET_STATS_DATA"]["STATISTICAL_DATA"]["DATA_INF"]["VALUE"]
+
+# 最初の10件を表示
+print("\n■ 労働力調査データ (先頭10件):")
+for val in values[:10]:
+    time = val.get("@time")
+    area = val.get("@area")
+    cat01 = val.get("@cat01")
+    value = val.get("$")
+    print(f"時期: {time}, 地域: {area}, 区分: {cat01}, 値: {value}")
